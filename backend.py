@@ -11,42 +11,42 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, f1_score
 import matplotlib.pyplot as plt
 
-# Load dataset
+# ------------------- Data Loading -------------------
 def load_data(path="parkinsons.csv"):
+    """Load dataset from repo root"""
     return pd.read_csv(path)
 
-# Split features and target
+# ------------------- Preprocessing -------------------
 def split_data(df, target_col="status"):
     X = df.drop(columns=[target_col])
     y = df[target_col]
     return train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-# Feature scaling
 def preprocess_data(X_train, X_test):
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
     return X_train_scaled, X_test_scaled
 
-# PCA
+# ------------------- PCA -------------------
 def apply_pca(X_train, X_test, n_components=10):
     pca = PCA(n_components=n_components, random_state=42)
     X_train_pca = pca.fit_transform(X_train)
     X_test_pca = pca.transform(X_test)
     return X_train_pca, X_test_pca
 
-# Train models
+# ------------------- Model Training -------------------
 def train_models(X_train, y_train):
     models = {
         "RandomForest": RandomForestClassifier(random_state=42),
         "SVM": SVC(probability=True, random_state=42),
         "MLP": MLPClassifier(max_iter=500, random_state=42)
     }
-    for m in models.values():
-        m.fit(X_train, y_train)
+    for model in models.values():
+        model.fit(X_train, y_train)
     return models
 
-# Evaluate models
+# ------------------- Evaluation -------------------
 def evaluate_model(models, X_test, y_test):
     results = []
     for name, model in models.items():
@@ -56,7 +56,7 @@ def evaluate_model(models, X_test, y_test):
         results.append({"Model": name, "Accuracy": acc, "F1-Score": f1})
     return pd.DataFrame(results)
 
-# Feature importance (RandomForest only)
+# ------------------- Feature Importance -------------------
 def feature_importance(model, feature_names, ax=None):
     if hasattr(model, "feature_importances_"):
         importances = model.feature_importances_
@@ -68,4 +68,5 @@ def feature_importance(model, feature_names, ax=None):
         ax.set_xticklabels(np.array(feature_names)[indices], rotation=90)
         ax.set_title("Feature Importance")
     else:
-        ax.text(0.5, 0.5, "Model has no feature_importances_", ha="center")
+        if ax:
+            ax.text(0.5, 0.5, "Model has no feature_importances_", ha="center")
