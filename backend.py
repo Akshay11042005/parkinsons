@@ -11,7 +11,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 
 # ====== Load Dataset ======
 def load_data(path="parkinsons.csv"):
-    """Load dataset from CSV"""
+    """Load dataset from CSV in repo root"""
     return pd.read_csv(path)
 
 # ====== Preprocessing ======
