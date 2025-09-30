@@ -1,4 +1,5 @@
 # backend.py
+
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -7,35 +8,97 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, f1_score
+import matplotlib.pyplot as plt
 
-# ====== Load Dataset ======
-def load_data(path="parkinsons.data"):
-    df = pd.read_csv(path)
-    if "name" in df.columns:
-        df = df.drop(columns=["name"])
-    return df
+# ------------------- Data Loading -------------------
+def load_data(path: str = "parkinsons.csv"):
+    """
+    Load dataset from CSV.
+    Default assumes 'parkinsons.csv' is in repo root.
+    """
+    return pd.read_csv(path)
 
-# ====== Preprocess Data ======
-def split_data(df):
-    X = df.drop(columns=["status"])
-    y = df["status"]
+
+# ------------------- Preprocessing -------------------
+def split_data(df: pd.DataFrame, target_col: str = "status"):
+    """
+    Split features and target, then train-test split.
+    """
+    X = df.drop(columns=[target_col])
+    y = df[target_col]
     return train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
+
 def preprocess_data(X_train, X_test):
+    """
+    Scale features using StandardScaler.
+    """
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
-    return X_train_scaled, X_test_scaled, scaler
+    return X_train_scaled, X_test_scaled
 
-# ====== PCA ======
-def apply_pca(X_train_scaled, X_test_scaled, n_components=10):
+
+# ------------------- PCA -------------------
+def apply_pca(X_train, X_test, n_components=10):
+    """
+    Apply PCA for dimensionality reduction.
+    """
     pca = PCA(n_components=n_components, random_state=42)
-    X_train_pca = pca.fit_transform(X_train_scaled)
-    X_test_pca = pca.transform(X_test_scaled)
-    return X_train_pca, X_test_pca, pca
+    X_train_pca = pca.fit_transform(X_train)
+    X_test_pca = pca.transform(X_test)
+    return X_train_pca, X_test_pca
 
-# ====== Train Models ======
+
+# ------------------- Model Training -------------------
 def train_models(X_train, y_train):
+    """
+    Train multiple models and return dictionary.
+    """
     models = {
-        "Random Forest": RandomForestClassifier
+        "RandomForest": RandomForestClassifier(random_state=42),
+        "SVM": SVC(probability=True, random_state=42),
+        "NeuralNet": MLPClassifier(max_iter=500, random_state=42),
+    }
+
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+
+    return models
+
+
+# ------------------- Evaluation -------------------
+def evaluate_model(models, X_test, y_test):
+    """
+    Evaluate trained models on test data.
+    Returns dataframe with Accuracy and F1-Score.
+    """
+    results = []
+    for name, model in models.items():
+        y_pred = model.predict(X_test)
+        acc = accuracy_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
+        results.append({"Model": name, "Accuracy": acc, "F1-Score": f1})
+
+    return pd.DataFrame(results)
+
+
+# ------------------- Feature Importance -------------------
+def feature_importance(model, feature_names, ax=None):
+    """
+    Plot feature importance for tree-based models (e.g., RandomForest).
+    """
+    if hasattr(model, "feature_importances_"):
+        importances = model.feature_importances_
+        indices = np.argsort(importances)[::-1]
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8, 5))
+
+        ax.bar(range(len(importances)), importances[indices], align="center")
+        ax.set_xticks(range(len(importances)))
+        ax.set_xticklabels(np.array(feature_names)[indices], rotation=90)
+        ax.set_title("Feature Importance")
+    else:
+        ax.text(0.5, 0.5, "Model has no feature_importances_", ha="center")
